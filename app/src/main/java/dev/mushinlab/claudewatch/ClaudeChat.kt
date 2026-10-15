@@ -3,7 +3,6 @@ package dev.mushinlab.claudewatch
 import com.anthropic.client.AnthropicClient
 import com.anthropic.client.okhttp.AnthropicOkHttpClient
 import com.anthropic.core.JsonValue
-import com.anthropic.helpers.MessageAccumulator
 import com.anthropic.models.messages.ContentBlockParam
 import com.anthropic.models.messages.Message
 import com.anthropic.models.messages.MessageCreateParams
@@ -106,10 +105,10 @@ object ClaudeChat {
     }
 
     private fun streamOnce(client: AnthropicClient, params: MessageCreateParams, onDelta: (String) -> Unit): Message {
-        val accumulator = MessageAccumulator.create()
+        val accumulator = StreamAccumulator()
         client.messages().createStreaming(params).use { response ->
             response.stream().forEach { event ->
-                accumulator.accumulate(event)
+                accumulator.accept(event)
                 event.contentBlockDelta().flatMap { it.delta().text() }.ifPresent { onDelta(it.text()) }
             }
         }
