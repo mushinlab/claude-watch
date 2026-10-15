@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:recognitionService="dev.mushinlab.claudewatch.assist.ClaudeRecognitionService"
+    android:sessionService="dev.mushinlab.claudewatch.assist.ClaudeSessionService"
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="true" />
