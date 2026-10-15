@@ -128,11 +128,10 @@ fun ChatScreen(vm: ChatViewModel, onMic: () -> Unit, onNewChat: () -> Unit, onSe
 }
 
 @Composable
-fun SettingsScreen(settings: Settings, onClose: () -> Unit) {
+fun SettingsScreen(settings: Settings, apiKey: String, onEditKey: () -> Unit, onClose: () -> Unit) {
     var model by remember { mutableStateOf(settings.model) }
     var effort by remember { mutableStateOf(settings.effort) }
     var speak by remember { mutableStateOf(settings.speakReplies) }
-    val key = settings.apiKey
     val listState = rememberScalingLazyListState()
 
     Scaffold(positionIndicator = { PositionIndicator(scalingLazyListState = listState) }) {
@@ -179,12 +178,17 @@ fun SettingsScreen(settings: Settings, onClose: () -> Unit) {
                 )
             }
             item {
-                Text(
-                    text = if (key.isBlank()) "API-ключ не задан" else "Ключ: …${key.takeLast(4)}",
-                    style = MaterialTheme.typography.caption2,
-                    color = if (key.isBlank()) Color(0xFFFF6B6B) else Color.Gray,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(8.dp),
+                Chip(
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("API-ключ Claude") },
+                    secondaryLabel = {
+                        Text(
+                            text = if (apiKey.isBlank()) "не задан" else "…${apiKey.takeLast(4)}",
+                            color = if (apiKey.isBlank()) Color(0xFFFF6B6B) else Color.Unspecified,
+                        )
+                    },
+                    onClick = onEditKey,
+                    colors = ChipDefaults.secondaryChipColors(),
                 )
             }
             item {

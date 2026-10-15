@@ -1,5 +1,6 @@
 package dev.mushinlab.claudewatch
 
+import android.app.RemoteInput
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
@@ -14,12 +15,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.input.RemoteInputIntentHelper
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val vm: ChatViewModel by viewModels()
     private var tts: TextToSpeech? = null
     private var showSettings by mutableStateOf(false)
+    private var apiKey by mutableStateOf("")
 
     private val speechLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -27,6 +30,12 @@ class MainActivity : ComponentActivity() {
                 ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
                 ?.firstOrNull()
             if (!text.isNullOrBlank()) vm.send(text)
+        }
+
+    private val keyInputLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val key = result.data?.let(RemoteInput::getResultsFromIntent)?.getCharSequence(KEY_INPUT)?.toString()
+            if (!key.isNullOrBlank()) vm.settings.apiKey = key
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,7 +46,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 if (showSettings) {
-                    SettingsScreen(vm.settings, onClose = { showSettings = false })
+                    SettingsScreen(
+                        vm.settings,
+                        apiKey = apiKey,
+                        onEditKey = ::editApiKey,
+                        onClose = { showSettings = false },
+                    )
                 } else {
                     ChatScreen(
                         vm = vm,
@@ -65,6 +79,7 @@ class MainActivity : ComponentActivity() {
         val prompt = if (BuildConfig.DEBUG) intent?.getStringExtra(EXTRA_PROMPT) else null
         if (vm.settings.apiKey.isBlank()) {
             showSettings = true
+            editApiKey()
         } else if (!prompt.isNullOrBlank()) {
             vm.send(prompt)
         } else {
@@ -84,9 +99,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun editApiKey() {
+        val intent = RemoteInputIntentHelper.createActionRemoteInputIntent()
+        RemoteInputIntentHelper.putRemoteInputsExtra(
+            intent,
+            listOf(RemoteInput.Builder(KEY_INPUT).setLabel("API-ключ Claude").build()),
+        )
+        try {
+            keyInputLauncher.launch(intent)
+        } catch (e: ActivityNotFoundException) {
+            showSettings = true
+        }
+    }
+
     private fun speak(text: String) {
         val clean = text.replace(Regex("[*_#`>]"), "")
         tts?.speak(clean, TextToSpeech.QUEUE_FLUSH, null, "reply")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        apiKey = vm.settings.apiKey
     }
 
     override fun onStop() {
@@ -102,5 +135,6 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_PROMPT = "prompt"
+        private const val KEY_INPUT = "api_key"
     }
 }
