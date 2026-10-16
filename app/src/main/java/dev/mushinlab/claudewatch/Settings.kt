@@ -34,7 +34,6 @@ class Settings(context: Context) {
         val id: String,
         val label: String,
         val supportsFallbacks: Boolean,
-        val dynamicWebSearch: Boolean,
     )
 
     companion object {
@@ -46,9 +45,9 @@ class Settings(context: Context) {
         private const val KEY_SPEAK = "speak"
 
         val MODELS = listOf(
-            ModelOption("claude-opus-5-5", "Opus 5.5", supportsFallbacks = true, dynamicWebSearch = true),
-            ModelOption("claude-sonnet-5-5", "Sonnet 5.5", supportsFallbacks = true, dynamicWebSearch = true),
-            ModelOption("claude-haiku-5-5", "Haiku 5.5", supportsFallbacks = false, dynamicWebSearch = false),
+            ModelOption("claude-opus-5-5", "Opus 5.5", supportsFallbacks = true),
+            ModelOption("claude-sonnet-5-5", "Sonnet 5.5", supportsFallbacks = true),
+            ModelOption("claude-haiku-5-5", "Haiku 5.5", supportsFallbacks = false),
         )
         val EFFORTS = listOf("low", "medium", "high", "xhigh", "max")
 

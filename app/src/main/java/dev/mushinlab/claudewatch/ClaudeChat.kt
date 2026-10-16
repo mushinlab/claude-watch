@@ -12,7 +12,6 @@ import com.anthropic.models.messages.ToolResultBlockParam
 import com.anthropic.models.messages.ToolUseBlock
 import com.anthropic.models.messages.OutputConfig
 import com.anthropic.models.messages.WebSearchTool20250305
-import com.anthropic.models.messages.WebSearchTool20260209
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -73,11 +72,7 @@ object ClaudeChat {
             .maxTokens(4000L)
             .system(system)
             .outputConfig(OutputConfig.builder().effort(OutputConfig.Effort.of(settings.effort)).build())
-        if (model?.dynamicWebSearch == false) {
-            builder.addTool(WebSearchTool20250305.builder().maxUses(3L).build())
-        } else {
-            builder.addTool(WebSearchTool20260209.builder().maxUses(3L).build())
-        }
+        builder.addTool(WebSearchTool20250305.builder().maxUses(3L).build())
         if (notion != null) NOTION_TOOLS.forEach { builder.addTool(it) }
         history.forEach { if (it.fromUser) builder.addUserMessage(it.text) else builder.addAssistantMessage(it.text) }
         if (model?.supportsFallbacks == true) {
