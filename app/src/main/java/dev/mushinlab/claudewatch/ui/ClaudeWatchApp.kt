@@ -15,7 +15,10 @@ import dev.mushinlab.claudewatch.ui.settings.SettingsViewModel
 
 enum class Destination { CHAT, SETTINGS }
 
-data class NavigationRequest(val destination: Destination, val id: Int)
+data class NavigationRequest(
+    val destination: Destination,
+    val id: Int,
+)
 
 @Composable
 fun ClaudeWatchApp(

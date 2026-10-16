@@ -32,16 +32,17 @@ class ChatViewModel(
     private val chat: ChatRepository,
     private val settings: SettingsRepository,
 ) : ViewModel() {
-    val uiState: StateFlow<ChatUiState> = combine(chat.session, settings.settings) { session, prefs ->
-        ChatUiState(
-            header = "${SettingsRepository.modelLabel(prefs.model)} · ${prefs.effort}",
-            messages = session.messages,
-            busy = session.busy,
-            usingTools = session.usingTools,
-            failure = session.failure,
-            hasUnseenResult = session.hasUnseenResult,
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ChatUiState())
+    val uiState: StateFlow<ChatUiState> =
+        combine(chat.session, settings.settings) { session, prefs ->
+            ChatUiState(
+                header = "${SettingsRepository.modelLabel(prefs.model)} · ${prefs.effort}",
+                messages = session.messages,
+                busy = session.busy,
+                usingTools = session.usingTools,
+                failure = session.failure,
+                hasUnseenResult = session.hasUnseenResult,
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ChatUiState())
 
     val repliesToSpeak: Flow<String> = chat.completedReplies.filter { settings.settings.value.speakReplies }
 
@@ -58,8 +59,9 @@ class ChatViewModel(
     companion object {
         private const val STOP_TIMEOUT_MS = 5_000L
 
-        fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
-            initializer { ChatViewModel(container.chatRepository, container.settingsRepository) }
-        }
+        fun factory(container: AppContainer): ViewModelProvider.Factory =
+            viewModelFactory {
+                initializer { ChatViewModel(container.chatRepository, container.settingsRepository) }
+            }
     }
 }

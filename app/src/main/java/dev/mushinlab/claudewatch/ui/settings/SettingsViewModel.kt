@@ -19,17 +19,23 @@ data class SettingsUiState(
     val apiKeySuffix: String? = null,
 )
 
-class SettingsViewModel(private val settings: SettingsRepository) : ViewModel() {
-    val uiState: StateFlow<SettingsUiState> = settings.settings.map {
-        SettingsUiState(
-            modelLabel = SettingsRepository.modelLabel(it.model),
-            effort = it.effort,
-            speakReplies = it.speakReplies,
-            apiKeySuffix = it.apiKey.takeIf { key -> key.isNotBlank() }?.takeLast(4),
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SettingsUiState())
+class SettingsViewModel(
+    private val settings: SettingsRepository,
+) : ViewModel() {
+    val uiState: StateFlow<SettingsUiState> =
+        settings.settings
+            .map {
+                SettingsUiState(
+                    modelLabel = SettingsRepository.modelLabel(it.model),
+                    effort = it.effort,
+                    speakReplies = it.speakReplies,
+                    apiKeySuffix = it.apiKey.takeIf { key -> key.isNotBlank() }?.takeLast(4),
+                )
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SettingsUiState())
 
-    val hasApiKey: Boolean get() = settings.settings.value.apiKey.isNotBlank()
+    val hasApiKey: Boolean get() =
+        settings.settings.value.apiKey
+            .isNotBlank()
 
     fun cycleModel() = settings.cycleModel()
 
@@ -42,8 +48,9 @@ class SettingsViewModel(private val settings: SettingsRepository) : ViewModel() 
     companion object {
         private const val STOP_TIMEOUT_MS = 5_000L
 
-        fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
-            initializer { SettingsViewModel(container.settingsRepository) }
-        }
+        fun factory(container: AppContainer): ViewModelProvider.Factory =
+            viewModelFactory {
+                initializer { SettingsViewModel(container.settingsRepository) }
+            }
     }
 }

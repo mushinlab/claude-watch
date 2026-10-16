@@ -5,7 +5,9 @@ import android.speech.tts.TextToSpeech
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 
-class ReplySpeaker(context: Context) : DefaultLifecycleObserver {
+class ReplySpeaker(
+    context: Context,
+) : DefaultLifecycleObserver {
     private val appContext = context.applicationContext
     private var engine: TextToSpeech? = null
     private var ready = false

@@ -5,7 +5,6 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
@@ -31,15 +30,20 @@ class ChatRequestService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
         startInForeground()
         if (watcher == null) {
             val session = (application as ClaudeWatchApplication).container.chatRepository.session
-            watcher = scope.launch {
-                session.first { !it.busy }
-                ServiceCompat.stopForeground(this@ChatRequestService, ServiceCompat.STOP_FOREGROUND_REMOVE)
-                stopSelf()
-            }
+            watcher =
+                scope.launch {
+                    session.first { !it.busy }
+                    ServiceCompat.stopForeground(this@ChatRequestService, ServiceCompat.STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
         }
         return START_NOT_STICKY
     }
@@ -51,25 +55,30 @@ class ChatRequestService : Service() {
 
     private fun startInForeground() {
         NotificationManagerCompat.from(this).createNotificationChannel(
-            NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_LOW)
+            NotificationChannelCompat
+                .Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_LOW)
                 .setName(getString(R.string.notification_channel_requests))
                 .build(),
         )
-        val openApp = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
+        val openApp =
+            PendingIntent.getActivity(
+                this,
+                0,
+                Intent(this, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
         val title = getString(R.string.notification_request_in_progress)
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentIntent(openApp)
-            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .setOngoing(true)
-            .setSilent(true)
-        OngoingActivity.Builder(this, NOTIFICATION_ID, notification)
+        val notification =
+            NotificationCompat
+                .Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(title)
+                .setContentIntent(openApp)
+                .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                .setOngoing(true)
+                .setSilent(true)
+        OngoingActivity
+            .Builder(this, NOTIFICATION_ID, notification)
             .setStaticIcon(R.drawable.ic_notification)
             .setTouchIntent(openApp)
             .setStatus(Status.Builder().addTemplate(title).build())
@@ -79,7 +88,7 @@ class ChatRequestService : Service() {
             this,
             NOTIFICATION_ID,
             notification.build(),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
         )
     }
 

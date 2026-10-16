@@ -14,7 +14,13 @@ class ChatSessionTest {
         assertTrue(ChatSession().shouldStartFreshChat)
         assertFalse(asked.started(2).shouldStartFreshChat)
         assertFalse(asked.started(2).completed(2, "+18").shouldStartFreshChat)
-        assertTrue(asked.started(2).completed(2, "+18").copy(seen = true).shouldStartFreshChat)
+        assertTrue(
+            asked
+                .started(2)
+                .completed(2, "+18")
+                .copy(seen = true)
+                .shouldStartFreshChat,
+        )
         assertFalse(asked.started(2).failed(2, Failure(FailureReason.NETWORK)).shouldStartFreshChat)
     }
 

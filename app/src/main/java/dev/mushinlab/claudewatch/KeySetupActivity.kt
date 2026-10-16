@@ -12,7 +12,13 @@ class KeySetupActivity : Activity() {
         intent.getStringExtra(EXTRA_NOTION_TOKEN)?.let(settings::setNotionToken)
         intent.getStringExtra(EXTRA_NOTION_PROMPT)?.let(settings::setNotionPrompt)
         intent.getStringExtra(EXTRA_NOTION_WRITABLE_PAGES)?.let { pages ->
-            settings.setNotionWritablePageIds(pages.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet())
+            settings.setNotionWritablePageIds(
+                pages
+                    .split(',')
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .toSet(),
+            )
         }
         Toast.makeText(applicationContext, R.string.keys_saved, Toast.LENGTH_SHORT).show()
         finish()

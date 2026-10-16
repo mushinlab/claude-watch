@@ -3,4 +3,4 @@
     android:recognitionService="dev.mushinlab.claudewatch.assist.ClaudeRecognitionService"
     android:sessionService="dev.mushinlab.claudewatch.assist.ClaudeSessionService"
     android:supportsAssist="true"
-    android:supportsLaunchVoiceAssistFromKeyguard="true" />
+    android:supportsLaunchVoiceAssistFromKeyguard="false" />

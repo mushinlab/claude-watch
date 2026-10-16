@@ -18,9 +18,16 @@ data class AppSettings(
     val notificationPermissionAsked: Boolean,
 )
 
-data class ModelOption(val id: String, val label: String, val supportsFallbacks: Boolean)
+data class ModelOption(
+    val id: String,
+    val label: String,
+    val supportsFallbacks: Boolean,
+)
 
-class SettingsRepository(context: Context, private val cipher: SecretCipher) {
+class SettingsRepository(
+    context: Context,
+    private val cipher: SecretCipher,
+) {
     private val prefs: SharedPreferences = context.getSharedPreferences("claude_settings", Context.MODE_PRIVATE)
     private val state = MutableStateFlow(read())
     val settings: StateFlow<AppSettings> = state.asStateFlow()
@@ -33,10 +40,11 @@ class SettingsRepository(context: Context, private val cipher: SecretCipher) {
 
     fun setNotionWritablePageIds(value: Set<String>) = update { putStringSet(KEY_NOTION_WRITABLE_PAGES, value) }
 
-    fun cycleModel() = update {
-        val ids = MODELS.map { it.id }
-        putString(KEY_MODEL, ids[(ids.indexOf(state.value.model) + 1) % ids.size])
-    }
+    fun cycleModel() =
+        update {
+            val ids = MODELS.map { it.id }
+            putString(KEY_MODEL, ids[(ids.indexOf(state.value.model) + 1) % ids.size])
+        }
 
     fun cycleEffort() = update { putString(KEY_EFFORT, EFFORTS[(EFFORTS.indexOf(state.value.effort) + 1) % EFFORTS.size]) }
 
@@ -49,7 +57,10 @@ class SettingsRepository(context: Context, private val cipher: SecretCipher) {
         state.value = read()
     }
 
-    private fun SharedPreferences.Editor.putSecret(key: String, value: String) {
+    private fun SharedPreferences.Editor.putSecret(
+        key: String,
+        value: String,
+    ) {
         val trimmed = value.trim()
         putString(key, if (trimmed.isEmpty()) "" else cipher.encrypt(trimmed))
     }
@@ -62,16 +73,17 @@ class SettingsRepository(context: Context, private val cipher: SecretCipher) {
         return stored
     }
 
-    private fun read() = AppSettings(
-        apiKey = readSecret(KEY_API_KEY),
-        notionToken = readSecret(KEY_NOTION_TOKEN),
-        notionPrompt = prefs.getString(KEY_NOTION_PROMPT, null).orEmpty(),
-        notionWritablePageIds = prefs.getStringSet(KEY_NOTION_WRITABLE_PAGES, null).orEmpty(),
-        model = prefs.getString(KEY_MODEL, null) ?: MODELS.first().id,
-        effort = prefs.getString(KEY_EFFORT, null) ?: EFFORTS.first(),
-        speakReplies = prefs.getBoolean(KEY_SPEAK, true),
-        notificationPermissionAsked = prefs.getBoolean(KEY_NOTIFICATION_ASKED, false),
-    )
+    private fun read() =
+        AppSettings(
+            apiKey = readSecret(KEY_API_KEY),
+            notionToken = readSecret(KEY_NOTION_TOKEN),
+            notionPrompt = prefs.getString(KEY_NOTION_PROMPT, null).orEmpty(),
+            notionWritablePageIds = prefs.getStringSet(KEY_NOTION_WRITABLE_PAGES, null).orEmpty(),
+            model = prefs.getString(KEY_MODEL, null) ?: MODELS.first().id,
+            effort = prefs.getString(KEY_EFFORT, null) ?: EFFORTS.first(),
+            speakReplies = prefs.getBoolean(KEY_SPEAK, true),
+            notificationPermissionAsked = prefs.getBoolean(KEY_NOTIFICATION_ASKED, false),
+        )
 
     companion object {
         private const val KEY_API_KEY = "api_key"
@@ -83,11 +95,12 @@ class SettingsRepository(context: Context, private val cipher: SecretCipher) {
         private const val KEY_SPEAK = "speak"
         private const val KEY_NOTIFICATION_ASKED = "notification_permission_asked"
 
-        val MODELS = listOf(
-            ModelOption("claude-opus-5-5", "Opus 5.5", supportsFallbacks = true),
-            ModelOption("claude-sonnet-5-5", "Sonnet 5.5", supportsFallbacks = true),
-            ModelOption("claude-haiku-5-5", "Haiku 5.5", supportsFallbacks = false),
-        )
+        val MODELS =
+            listOf(
+                ModelOption("claude-opus-5-5", "Opus 5.5", supportsFallbacks = true),
+                ModelOption("claude-sonnet-5-5", "Sonnet 5.5", supportsFallbacks = true),
+                ModelOption("claude-haiku-5-5", "Haiku 5.5", supportsFallbacks = false),
+            )
         val EFFORTS = listOf("low", "medium", "high", "xhigh", "max")
 
         fun modelLabel(id: String): String = MODELS.firstOrNull { it.id == id }?.label ?: id

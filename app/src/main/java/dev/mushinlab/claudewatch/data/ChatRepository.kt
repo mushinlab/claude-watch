@@ -3,7 +3,6 @@ package dev.mushinlab.claudewatch.data
 import com.anthropic.errors.AnthropicIoException
 import com.anthropic.errors.AnthropicServiceException
 import com.anthropic.errors.UnauthorizedException
-import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import java.io.IOException
 
 class ChatRepository(
     private val settings: SettingsRepository,
@@ -65,63 +65,68 @@ class ChatRepository(
         val current = state.value
         val history = current.historyForRequest()
         val replyId = ++lastId
-        if (settings.settings.value.apiKey.isBlank()) {
+        if (settings.settings.value.apiKey
+                .isBlank()
+        ) {
             update(current.started(replyId).failed(replyId, Failure(FailureReason.NO_API_KEY)))
             return
         }
         update(current.started(replyId))
         onRequestStarted()
-        job = scope.launch {
-            val buffer = StringBuilder()
-            val dirty = Channel<Unit>(Channel.CONFLATED)
-            val publisher = launch {
-                for (signal in dirty) {
-                    val text = synchronized(buffer) { buffer.toString() }
-                    state.update { it.withReplyText(replyId, text) }
-                    delay(UI_UPDATE_INTERVAL_MS)
+        job =
+            scope.launch {
+                val buffer = StringBuilder()
+                val dirty = Channel<Unit>(Channel.CONFLATED)
+                val publisher =
+                    launch {
+                        for (signal in dirty) {
+                            val text = synchronized(buffer) { buffer.toString() }
+                            state.update { it.withReplyText(replyId, text) }
+                            delay(UI_UPDATE_INTERVAL_MS)
+                        }
+                    }
+                try {
+                    val reply =
+                        withTimeout(REQUEST_TIMEOUT_MS) {
+                            remote.stream(
+                                settings = settings.settings.value,
+                                history = history,
+                                onToolUse = { active ->
+                                    state.update { session ->
+                                        if (session.messages.any { it.id == replyId }) session.copy(usingTools = active) else session
+                                    }
+                                },
+                                onDelta = { delta ->
+                                    synchronized(buffer) { buffer.append(delta) }
+                                    dirty.trySend(Unit)
+                                },
+                            )
+                        }
+                    publisher.cancel()
+                    if (reply.isBlank()) {
+                        finish { it.failed(replyId, Failure(FailureReason.EMPTY_REPLY)) }
+                    } else {
+                        finish { it.completed(replyId, reply) }
+                        replies.tryEmit(reply)
+                    }
+                } catch (e: TimeoutCancellationException) {
+                    finish { it.failed(replyId, Failure(FailureReason.TIMEOUT)) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: UnauthorizedException) {
+                    finish { it.failed(replyId, Failure(FailureReason.UNAUTHORIZED)) }
+                } catch (e: AnthropicServiceException) {
+                    finish { it.failed(replyId, Failure(FailureReason.API, "${e.statusCode()}: ${e.message}")) }
+                } catch (e: AnthropicIoException) {
+                    finish { it.failed(replyId, Failure(FailureReason.NETWORK, e.message)) }
+                } catch (e: IOException) {
+                    finish { it.failed(replyId, Failure(FailureReason.NETWORK, e.message)) }
+                } catch (e: Exception) {
+                    finish { it.failed(replyId, Failure(FailureReason.NETWORK, e.message ?: e.javaClass.simpleName)) }
+                } finally {
+                    publisher.cancel()
                 }
             }
-            try {
-                val reply = withTimeout(REQUEST_TIMEOUT_MS) {
-                    remote.stream(
-                        settings = settings.settings.value,
-                        history = history,
-                        onToolUse = { active ->
-                            state.update { session ->
-                                if (session.messages.any { it.id == replyId }) session.copy(usingTools = active) else session
-                            }
-                        },
-                        onDelta = { delta ->
-                            synchronized(buffer) { buffer.append(delta) }
-                            dirty.trySend(Unit)
-                        },
-                    )
-                }
-                publisher.cancel()
-                if (reply.isBlank()) {
-                    finish { it.failed(replyId, Failure(FailureReason.EMPTY_REPLY)) }
-                } else {
-                    finish { it.completed(replyId, reply) }
-                    replies.tryEmit(reply)
-                }
-            } catch (e: TimeoutCancellationException) {
-                finish { it.failed(replyId, Failure(FailureReason.TIMEOUT)) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: UnauthorizedException) {
-                finish { it.failed(replyId, Failure(FailureReason.UNAUTHORIZED)) }
-            } catch (e: AnthropicServiceException) {
-                finish { it.failed(replyId, Failure(FailureReason.API, "${e.statusCode()}: ${e.message}")) }
-            } catch (e: AnthropicIoException) {
-                finish { it.failed(replyId, Failure(FailureReason.NETWORK, e.message)) }
-            } catch (e: IOException) {
-                finish { it.failed(replyId, Failure(FailureReason.NETWORK, e.message)) }
-            } catch (e: Exception) {
-                finish { it.failed(replyId, Failure(FailureReason.NETWORK, e.message ?: e.javaClass.simpleName)) }
-            } finally {
-                publisher.cancel()
-            }
-        }
     }
 
     private fun finish(change: (ChatSession) -> ChatSession) {

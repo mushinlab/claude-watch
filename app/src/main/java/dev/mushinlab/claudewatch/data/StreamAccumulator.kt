@@ -30,9 +30,13 @@ class StreamAccumulator {
 
     fun message(): Message = accumulator.message()
 
-    private fun inputDelta(index: Long, input: JsonValue): RawMessageStreamEvent =
+    private fun inputDelta(
+        index: Long,
+        input: JsonValue,
+    ): RawMessageStreamEvent =
         RawMessageStreamEvent.ofContentBlockDelta(
-            RawContentBlockDeltaEvent.builder()
+            RawContentBlockDeltaEvent
+                .builder()
                 .index(index)
                 .delta(InputJsonDelta.builder().partialJson(jsonMapper().writeValueAsString(input)).build())
                 .build(),

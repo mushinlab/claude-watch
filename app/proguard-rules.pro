@@ -16,3 +16,4 @@
 -dontwarn org.openjsse.**
 -dontwarn java.lang.reflect.AnnotatedParameterizedType
 -dontwarn java.lang.reflect.AnnotatedType
+-dontwarn com.google.auto.value.AutoValue

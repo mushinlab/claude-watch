@@ -43,7 +43,11 @@ class MainActivity : ComponentActivity() {
 
     private val keyInputLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            val key = result.data?.let(RemoteInput::getResultsFromIntent)?.getCharSequence(KEY_INPUT)?.toString()
+            val key =
+                result.data
+                    ?.let(RemoteInput::getResultsFromIntent)
+                    ?.getCharSequence(KEY_INPUT)
+                    ?.toString()
             if (!key.isNullOrBlank()) settingsViewModel.setApiKey(key)
         }
 
@@ -111,9 +115,10 @@ class MainActivity : ComponentActivity() {
 
     private fun listen() {
         speaker.stop()
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.speech_prompt))
+        val intent =
+            Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.speech_prompt))
         try {
             speechLauncher.launch(intent)
         } catch (e: ActivityNotFoundException) {

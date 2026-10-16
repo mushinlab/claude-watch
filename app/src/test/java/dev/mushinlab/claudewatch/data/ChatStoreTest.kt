@@ -1,9 +1,9 @@
 package dev.mushinlab.claudewatch.data
 
-import java.io.File
-import java.nio.file.Files
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 class ChatStoreTest {
     private val dir: File = Files.createTempDirectory("chat-store").toFile()
@@ -11,10 +11,11 @@ class ChatStoreTest {
 
     @Test
     fun roundTripsCompletedChat() {
-        val session = ChatSession()
-            .withUserMessage(1, "погода в Тбилиси")
-            .started(2)
-            .completed(2, "Солнечно, +18.\nВетер слабый.")
+        val session =
+            ChatSession()
+                .withUserMessage(1, "погода в Тбилиси")
+                .started(2)
+                .completed(2, "Солнечно, +18.\nВетер слабый.")
         store.save(session)
 
         assertEquals(session.copy(usingTools = false), store.load())

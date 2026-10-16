@@ -48,7 +48,11 @@ fun ChatScreen(
 ) {
     val listState = rememberScalingLazyListState()
     var followBottom by remember { mutableStateOf(true) }
-    val lastLength = state.messages.lastOrNull()?.text?.length
+    val lastLength =
+        state.messages
+            .lastOrNull()
+            ?.text
+            ?.length
 
     LaunchedEffect(state.hasUnseenResult) {
         if (state.hasUnseenResult) onSeen()
@@ -137,7 +141,11 @@ fun ChatScreen(
 }
 
 @Composable
-private fun ChatControls(onMic: () -> Unit, onNewChat: () -> Unit, onSettings: () -> Unit) {
+private fun ChatControls(
+    onMic: () -> Unit,
+    onNewChat: () -> Unit,
+    onSettings: () -> Unit,
+) {
     val micDescription = stringResource(R.string.chat_ask_by_voice)
     val newChatDescription = stringResource(R.string.chat_new)
     val settingsDescription = stringResource(R.string.chat_open_settings)
@@ -167,12 +175,13 @@ private fun ChatControls(onMic: () -> Unit, onNewChat: () -> Unit, onSettings: (
 }
 
 @Composable
-private fun Failure.message(): String = when (reason) {
-    FailureReason.NO_API_KEY -> stringResource(R.string.error_no_api_key)
-    FailureReason.UNAUTHORIZED -> stringResource(R.string.error_unauthorized)
-    FailureReason.API -> stringResource(R.string.error_api, detail.orEmpty())
-    FailureReason.NETWORK -> stringResource(R.string.error_network, detail.orEmpty())
-    FailureReason.TIMEOUT -> stringResource(R.string.error_timeout)
-    FailureReason.INTERRUPTED -> stringResource(R.string.error_interrupted)
-    FailureReason.EMPTY_REPLY -> stringResource(R.string.error_empty_reply)
-}
+private fun Failure.message(): String =
+    when (reason) {
+        FailureReason.NO_API_KEY -> stringResource(R.string.error_no_api_key)
+        FailureReason.UNAUTHORIZED -> stringResource(R.string.error_unauthorized)
+        FailureReason.API -> stringResource(R.string.error_api, detail.orEmpty())
+        FailureReason.NETWORK -> stringResource(R.string.error_network, detail.orEmpty())
+        FailureReason.TIMEOUT -> stringResource(R.string.error_timeout)
+        FailureReason.INTERRUPTED -> stringResource(R.string.error_interrupted)
+        FailureReason.EMPTY_REPLY -> stringResource(R.string.error_empty_reply)
+    }

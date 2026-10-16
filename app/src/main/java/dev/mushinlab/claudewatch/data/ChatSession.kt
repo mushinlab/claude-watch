@@ -1,6 +1,10 @@
 package dev.mushinlab.claudewatch.data
 
-data class ChatMessage(val id: Long, val fromUser: Boolean, val text: String) {
+data class ChatMessage(
+    val id: Long,
+    val fromUser: Boolean,
+    val text: String,
+) {
     val paragraphs: List<String> by lazy { text.split('\n').filter { it.isNotBlank() } }
 }
 
@@ -8,7 +12,10 @@ enum class TurnStatus { IDLE, PENDING, DONE, FAILED }
 
 enum class FailureReason { NO_API_KEY, UNAUTHORIZED, API, NETWORK, TIMEOUT, INTERRUPTED, EMPTY_REPLY }
 
-data class Failure(val reason: FailureReason, val detail: String? = null)
+data class Failure(
+    val reason: FailureReason,
+    val detail: String? = null,
+)
 
 data class ChatSession(
     val messages: List<ChatMessage> = emptyList(),
@@ -26,28 +33,39 @@ data class ChatSession(
 
     val lastMessageId: Long get() = messages.maxOfOrNull { it.id } ?: 0L
 
-    fun withUserMessage(id: Long, text: String): ChatSession =
-        copy(messages = messages + ChatMessage(id, fromUser = true, text = text))
+    fun withUserMessage(
+        id: Long,
+        text: String,
+    ): ChatSession = copy(messages = messages + ChatMessage(id, fromUser = true, text = text))
 
-    fun started(replyId: Long): ChatSession = copy(
-        messages = messages + ChatMessage(replyId, fromUser = false, text = ""),
-        status = TurnStatus.PENDING,
-        failure = null,
-        seen = false,
-        usingTools = false,
-    )
+    fun started(replyId: Long): ChatSession =
+        copy(
+            messages = messages + ChatMessage(replyId, fromUser = false, text = ""),
+            status = TurnStatus.PENDING,
+            failure = null,
+            seen = false,
+            usingTools = false,
+        )
 
-    fun withReplyText(replyId: Long, text: String): ChatSession =
-        copy(messages = messages.map { if (it.id == replyId) it.copy(text = text) else it })
+    fun withReplyText(
+        replyId: Long,
+        text: String,
+    ): ChatSession = copy(messages = messages.map { if (it.id == replyId) it.copy(text = text) else it })
 
-    fun completed(replyId: Long, text: String): ChatSession =
+    fun completed(
+        replyId: Long,
+        text: String,
+    ): ChatSession =
         if (messages.none { it.id == replyId }) {
             this
         } else {
             withReplyText(replyId, text).copy(status = TurnStatus.DONE, usingTools = false)
         }
 
-    fun failed(replyId: Long, failure: Failure): ChatSession =
+    fun failed(
+        replyId: Long,
+        failure: Failure,
+    ): ChatSession =
         if (messages.none { it.id == replyId }) {
             this
         } else {

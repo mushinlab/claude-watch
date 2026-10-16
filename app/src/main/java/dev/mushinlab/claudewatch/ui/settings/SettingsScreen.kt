@@ -72,11 +72,12 @@ fun SettingsScreen(
                     secondaryLabel = {
                         val suffix = state.apiKeySuffix
                         Text(
-                            text = if (suffix == null) {
-                                stringResource(R.string.settings_api_key_missing)
-                            } else {
-                                stringResource(R.string.settings_api_key_suffix, suffix)
-                            },
+                            text =
+                                if (suffix == null) {
+                                    stringResource(R.string.settings_api_key_missing)
+                                } else {
+                                    stringResource(R.string.settings_api_key_suffix, suffix)
+                                },
                             color = if (suffix == null) ErrorRed else Color.Unspecified,
                         )
                     },
