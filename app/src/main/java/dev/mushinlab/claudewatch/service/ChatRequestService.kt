@@ -36,15 +36,14 @@ class ChatRequestService : Service() {
         startId: Int,
     ): Int {
         startInForeground()
-        if (watcher == null) {
-            val session = (application as ClaudeWatchApplication).container.chatRepository.session
-            watcher =
-                scope.launch {
-                    session.first { !it.busy }
-                    ServiceCompat.stopForeground(this@ChatRequestService, ServiceCompat.STOP_FOREGROUND_REMOVE)
-                    stopSelf()
-                }
-        }
+        val session = (application as ClaudeWatchApplication).container.chatRepository.session
+        watcher?.cancel()
+        watcher =
+            scope.launch {
+                session.first { !it.busy }
+                ServiceCompat.stopForeground(this@ChatRequestService, ServiceCompat.STOP_FOREGROUND_REMOVE)
+                stopSelf(startId)
+            }
         return START_NOT_STICKY
     }
 

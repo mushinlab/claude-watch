@@ -145,6 +145,6 @@ class ChatRepository(
 
     private companion object {
         const val UI_UPDATE_INTERVAL_MS = 150L
-        const val REQUEST_TIMEOUT_MS = 240_000L
+        const val REQUEST_TIMEOUT_MS = 180_000L
     }
 }

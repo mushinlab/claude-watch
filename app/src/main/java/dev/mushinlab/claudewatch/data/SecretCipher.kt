@@ -5,6 +5,7 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import java.security.GeneralSecurityException
 import java.security.KeyStore
+import java.security.ProviderException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -28,6 +29,8 @@ class SecretCipher {
         } catch (e: GeneralSecurityException) {
             null
         } catch (e: IllegalArgumentException) {
+            null
+        } catch (e: ProviderException) {
             null
         }
 

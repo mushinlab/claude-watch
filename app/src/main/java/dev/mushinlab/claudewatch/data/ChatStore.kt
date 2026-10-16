@@ -3,6 +3,8 @@ package dev.mushinlab.claudewatch.data
 import com.anthropic.core.jsonMapper
 import com.fasterxml.jackson.databind.JsonNode
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 
 class ChatStore(
     private val file: File,
@@ -14,11 +16,17 @@ class ChatStore(
             ChatSession()
         }
 
-    fun save(session: ChatSession) {
-        val tmp = File(file.parentFile, "${file.name}.tmp")
-        tmp.writeText(jsonMapper().writeValueAsString(encode(session)))
-        tmp.renameTo(file)
-    }
+    fun save(session: ChatSession): Boolean =
+        try {
+            val tmp = File(file.parentFile, "${file.name}.tmp")
+            FileOutputStream(tmp).use { out ->
+                out.write(jsonMapper().writeValueAsBytes(encode(session)))
+                out.fd.sync()
+            }
+            tmp.renameTo(file)
+        } catch (e: IOException) {
+            false
+        }
 
     private fun encode(session: ChatSession): JsonNode {
         val root = jsonMapper().createObjectNode()
@@ -44,10 +52,12 @@ class ChatStore(
                 root.path("messages").map {
                     ChatMessage(it.path("id").asLong(), it.path("fromUser").asBoolean(), it.path("text").asText())
                 },
-            status = TurnStatus.valueOf(root.path("status").asText(TurnStatus.IDLE.name)),
+            status = TurnStatus.entries.firstOrNull { it.name == root.path("status").asText() } ?: TurnStatus.IDLE,
             failure =
                 root.get("failure")?.let {
-                    Failure(FailureReason.valueOf(it.path("reason").asText()), it.get("detail")?.takeUnless { d -> d.isNull }?.asText())
+                    FailureReason.entries
+                        .firstOrNull { reason -> reason.name == it.path("reason").asText() }
+                        ?.let { reason -> Failure(reason, it.get("detail")?.takeUnless { d -> d.isNull }?.asText()) }
                 },
             seen = root.path("seen").asBoolean(true),
         )

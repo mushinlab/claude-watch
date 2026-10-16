@@ -159,7 +159,7 @@ class ClaudeRemoteDataSource {
         val result = ToolResultBlockParam.builder().toolUseId(call.id())
         try {
             if (notion == null) throw NotionApi.NotionException("Notion не настроен.")
-            val input = JSONObject(call._input().convert(Map::class.java))
+            val input = JSONObject(call._input().convert(Map::class.java).orEmpty())
             val output =
                 when (call.name()) {
                     "notion_search" -> notion.search(input.getString("query"))
@@ -196,7 +196,7 @@ class ClaudeRemoteDataSource {
                 .connect(Duration.ofSeconds(10))
                 .read(Duration.ofSeconds(60))
                 .write(Duration.ofSeconds(30))
-                .request(Duration.ofSeconds(150))
+                .request(Duration.ofSeconds(90))
                 .build()
 
         const val SYSTEM_PROMPT =
@@ -205,7 +205,7 @@ class ClaudeRemoteDataSource {
                 "Отвечай на языке пользователя. Если вопрос про свежие события, погоду, цены или другие актуальные данные, " +
                 "используй веб-поиск."
 
-        val NOW_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM yyyy, EEEE, HH:mm", Locale("ru"))
+        val NOW_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM yyyy, EEEE, HH:mm", Locale.forLanguageTag("ru"))
 
         const val NOTION_PROMPT =
             "У тебя есть инструменты Notion: искать, читать, создавать и редактировать страницы. " +

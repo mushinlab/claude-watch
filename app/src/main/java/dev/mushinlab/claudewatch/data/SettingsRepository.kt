@@ -62,7 +62,8 @@ class SettingsRepository(
         value: String,
     ) {
         val trimmed = value.trim()
-        putString(key, if (trimmed.isEmpty()) "" else cipher.encrypt(trimmed))
+        val sealed = if (trimmed.isEmpty()) null else runCatching { cipher.encrypt(trimmed) }.getOrNull()
+        putString(key, sealed.orEmpty())
     }
 
     private fun readSecret(key: String): String {
