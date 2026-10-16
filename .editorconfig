@@ -1,0 +1,4 @@
+root = true
+
+[*.{kt,kts}]
+code_style = android_studio

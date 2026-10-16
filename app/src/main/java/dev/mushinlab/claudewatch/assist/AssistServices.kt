@@ -18,19 +18,25 @@ class ClaudeSessionService : VoiceInteractionSessionService() {
 }
 
 /** No overlay UI: the session just opens the chat activity with a fresh conversation. */
-class ClaudeSession(context: Context) : VoiceInteractionSession(context) {
-    override fun onShow(args: Bundle?, showFlags: Int) {
+class ClaudeSession(
+    context: Context,
+) : VoiceInteractionSession(context) {
+    override fun onShow(
+        args: Bundle?,
+        showFlags: Int,
+    ) {
         super.onShow(args, showFlags)
-        val intent = Intent(context, MainActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        startAssistantActivity(intent)
+        startAssistantActivity(Intent(context, MainActivity::class.java))
         hide()
     }
 }
 
 /** Stub required by the voice interaction spec; speech input goes through RecognizerIntent. */
 class ClaudeRecognitionService : RecognitionService() {
-    override fun onStartListening(recognizerIntent: Intent?, listener: Callback?) {
+    override fun onStartListening(
+        recognizerIntent: Intent?,
+        listener: Callback?,
+    ) {
         listener?.error(SpeechRecognizer.ERROR_CLIENT)
     }
 

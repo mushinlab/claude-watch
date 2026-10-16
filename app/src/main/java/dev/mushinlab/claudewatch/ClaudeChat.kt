@@ -12,6 +12,7 @@ import com.anthropic.models.messages.ToolResultBlockParam
 import com.anthropic.models.messages.ToolUseBlock
 import com.anthropic.models.messages.OutputConfig
 import com.anthropic.models.messages.WebSearchTool20250305
+import dev.mushinlab.claudewatch.data.NotionApi
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -58,7 +59,7 @@ object ClaudeChat {
         onDelta: (String) -> Unit,
     ): String {
         val model = Settings.MODELS.firstOrNull { it.id == settings.model }
-        val notion = settings.notionToken.takeIf { it.isNotBlank() }?.let(::NotionApi)
+        val notion = settings.notionToken.takeIf { it.isNotBlank() }?.let { NotionApi(it, emptySet()) }
         val system = buildString {
             append(SYSTEM_PROMPT)
             if (notion != null) {
