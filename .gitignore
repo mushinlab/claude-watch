@@ -10,3 +10,5 @@ AUDIT_REVIEW.md
 .kotlin/
 audit/
 .worktrees/
+*.keystore
+*.jks
