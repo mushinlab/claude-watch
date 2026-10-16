@@ -9,4 +9,5 @@ prop() {
 adb shell "am start -n dev.mushinlab.claudewatch/.KeySetupActivity \
   --es api_key '$(prop claude.apiKey)' \
   --es notion_token '$(prop notion.token)' \
-  --es notion_prompt '$(prop notion.prompt)'"
+  --es notion_prompt '$(prop notion.prompt)' \
+  --es notion_writable_pages '$(prop notion.writablePages)'"

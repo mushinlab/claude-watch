@@ -7,3 +7,5 @@ local.properties
 AUDIT.md
 AUDIT_REVIEW.md
 .kotlin/
+audit/
+.worktrees/

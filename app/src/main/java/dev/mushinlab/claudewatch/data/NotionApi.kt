@@ -1,4 +1,4 @@
-package dev.mushinlab.claudewatch
+package dev.mushinlab.claudewatch.data
 
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -8,7 +8,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /** Minimal Notion REST client; every function returns compact text for Claude or throws [NotionException]. */
-class NotionApi(private val token: String) {
+class NotionApi(private val token: String, @Suppress("unused") writablePageIds: Set<String>) {
     class NotionException(message: String) : Exception(message)
 
     private val http = OkHttpClient()

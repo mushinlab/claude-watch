@@ -1,11 +1,13 @@
 package dev.mushinlab.claudewatch
 
+import android.Manifest
 import android.app.RemoteInput
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognizerIntent
-import android.speech.tts.TextToSpeech
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,54 +15,61 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.wear.compose.material.MaterialTheme
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.wear.input.RemoteInputIntentHelper
+import dev.mushinlab.claudewatch.ui.ClaudeWatchApp
+import dev.mushinlab.claudewatch.ui.Destination
+import dev.mushinlab.claudewatch.ui.NavigationRequest
+import dev.mushinlab.claudewatch.ui.ReplySpeaker
+import dev.mushinlab.claudewatch.ui.chat.ChatViewModel
+import dev.mushinlab.claudewatch.ui.settings.SettingsViewModel
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    private val vm: ChatViewModel by viewModels()
-    private var tts: TextToSpeech? = null
-    private var showSettings by mutableStateOf(false)
-    private var apiKey by mutableStateOf("")
+    private val container get() = (application as ClaudeWatchApplication).container
+    private val chatViewModel: ChatViewModel by viewModels { ChatViewModel.factory(container) }
+    private val settingsViewModel: SettingsViewModel by viewModels { SettingsViewModel.factory(container) }
+    private val speaker by lazy { ReplySpeaker(this) }
+    private var navigationRequest by mutableStateOf<NavigationRequest?>(null)
 
     private val speechLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            val text = result.data
-                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                ?.firstOrNull()
-            if (!text.isNullOrBlank()) vm.send(text)
+            val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!text.isNullOrBlank()) chatViewModel.send(text)
         }
 
     private val keyInputLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             val key = result.data?.let(RemoteInput::getResultsFromIntent)?.getCharSequence(KEY_INPUT)?.toString()
-            if (!key.isNullOrBlank()) vm.settings.apiKey = key
+            if (!key.isNullOrBlank()) settingsViewModel.setApiKey(key)
         }
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { listen() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        tts = TextToSpeech(this) { }
-        lifecycleScope.launch { vm.replies.collect { speak(it) } }
-
-        setContent {
-            MaterialTheme {
-                if (showSettings) {
-                    SettingsScreen(
-                        vm.settings,
-                        apiKey = apiKey,
-                        onEditKey = ::editApiKey,
-                        onClose = { showSettings = false },
-                    )
-                } else {
-                    ChatScreen(
-                        vm = vm,
-                        onMic = ::listen,
-                        onNewChat = { vm.newChat(); listen() },
-                        onSettings = { showSettings = true },
-                    )
-                }
+        lifecycle.addObserver(speaker)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                chatViewModel.repliesToSpeak.collect(speaker::speak)
             }
+        }
+        setContent {
+            ClaudeWatchApp(
+                chatViewModel = chatViewModel,
+                settingsViewModel = settingsViewModel,
+                navigationRequest = navigationRequest,
+                onMic = ::listen,
+                onNewChat = {
+                    chatViewModel.newChat()
+                    listen()
+                },
+                onEditKey = ::editApiKey,
+            )
         }
         if (savedInstanceState == null) handleLaunch(intent)
     }
@@ -71,31 +80,44 @@ class MainActivity : ComponentActivity() {
         handleLaunch(intent)
     }
 
-    /** Every launch (button, launcher, assist) opens a fresh chat and starts listening. */
     private fun handleLaunch(intent: Intent?) {
-        // Debug-only test hook: adb shell am start -n dev.mushinlab.claudewatch/.MainActivity --es prompt "..."
-        showSettings = false
-        vm.newChat()
+        navigate(Destination.CHAT)
+        if (!chatViewModel.shouldStartFreshChat) return
+        chatViewModel.newChat()
         val prompt = if (BuildConfig.DEBUG) intent?.getStringExtra(EXTRA_PROMPT) else null
-        if (vm.settings.apiKey.isBlank()) {
-            showSettings = true
-            editApiKey()
-        } else if (!prompt.isNullOrBlank()) {
-            vm.send(prompt)
-        } else {
-            listen()
+        when {
+            !settingsViewModel.hasApiKey -> {
+                navigate(Destination.SETTINGS)
+                editApiKey()
+            }
+            !prompt.isNullOrBlank() -> chatViewModel.send(prompt)
+            shouldAskNotificationPermission() -> {
+                container.settingsRepository.markNotificationPermissionAsked()
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            else -> listen()
         }
     }
 
+    private fun shouldAskNotificationPermission(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !container.settingsRepository.settings.value.notificationPermissionAsked &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+
+    private fun navigate(destination: Destination) {
+        navigationRequest = NavigationRequest(destination, (navigationRequest?.id ?: 0) + 1)
+    }
+
     private fun listen() {
-        tts?.stop()
+        speaker.stop()
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_PROMPT, "Спроси Claude")
+            .putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.speech_prompt))
         try {
             speechLauncher.launch(intent)
         } catch (e: ActivityNotFoundException) {
-            // No recognizer on this watch: the chat screen still works with the keyboard button.
+            return
         }
     }
 
@@ -103,34 +125,13 @@ class MainActivity : ComponentActivity() {
         val intent = RemoteInputIntentHelper.createActionRemoteInputIntent()
         RemoteInputIntentHelper.putRemoteInputsExtra(
             intent,
-            listOf(RemoteInput.Builder(KEY_INPUT).setLabel("API-ключ Claude").build()),
+            listOf(RemoteInput.Builder(KEY_INPUT).setLabel(getString(R.string.settings_api_key)).build()),
         )
         try {
             keyInputLauncher.launch(intent)
         } catch (e: ActivityNotFoundException) {
-            showSettings = true
+            navigate(Destination.SETTINGS)
         }
-    }
-
-    private fun speak(text: String) {
-        val clean = text.replace(Regex("[*_#`>]"), "")
-        tts?.speak(clean, TextToSpeech.QUEUE_FLUSH, null, "reply")
-    }
-
-    override fun onResume() {
-        super.onResume()
-        apiKey = vm.settings.apiKey
-    }
-
-    override fun onStop() {
-        super.onStop()
-        tts?.stop()
-    }
-
-    override fun onDestroy() {
-        tts?.shutdown()
-        tts = null
-        super.onDestroy()
     }
 
     companion object {

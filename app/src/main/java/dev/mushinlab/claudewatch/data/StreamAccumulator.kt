@@ -1,4 +1,4 @@
-package dev.mushinlab.claudewatch
+package dev.mushinlab.claudewatch.data
 
 import com.anthropic.core.JsonValue
 import com.anthropic.core.jsonMapper

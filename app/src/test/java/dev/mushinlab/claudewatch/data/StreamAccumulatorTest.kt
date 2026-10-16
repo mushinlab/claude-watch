@@ -1,4 +1,4 @@
-package dev.mushinlab.claudewatch
+package dev.mushinlab.claudewatch.data
 
 import com.anthropic.core.jsonMapper
 import com.anthropic.models.messages.RawMessageStreamEvent

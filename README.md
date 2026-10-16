@@ -1,6 +1,6 @@
 # Claude для Pixel Watch (MVP)
 
-Wear OS приложение: по долгому нажатию боковой кнопки открывает новый чат с Claude, сразу слушает голос, стримит ответ на экран и зачитывает его.
+Wear OS приложение: по долгому нажатию боковой кнопки открывает новый чат с Claude, сразу слушает голос, стримит ответ на экран и зачитывает его. Если ответ ещё идёт или вы его не видели, повторный запуск открывает тот же чат, а не новый.
 
 - Модель и effort по умолчанию: **Opus 5.5 · low**, меняются в ⚙ (модель: Opus 5.5 / Sonnet 5.5 / Haiku 5.5; effort: low…max).
 - Ключ: Claude API key из platform.claude.com.
@@ -15,15 +15,18 @@ Wear OS приложение: по долгому нажатию боковой 
    claude.apiKey=sk-ant-...
    notion.token=ntn_...        # необязательно
    notion.prompt=...           # необязательно: инструкции к своим страницам Notion одной строкой
+   notion.writablePages=...    # ID страниц Notion через запятую, куда Claude может писать (вместе с подстраницами)
    ```
    В сборку ключи не попадают: их передают на часы после установки (см. ниже).
 
 ## Сборка
 
 ```
-./gradlew :app:assembleDebug
+./gradlew :app:assembleRelease
 ```
-APK: `app/build/outputs/apk/debug/app-debug.apk`
+APK: `app/build/outputs/apk/release/app-release.apk`. На часы ставьте release: debug-сборка заметно медленнее и тратит больше батареи.
+
+Release подписывается ключом из `keystore.properties` в корне проекта (в git не попадает); если файла нет, локальная сборка подписывается debug-ключом.
 
 ## Установка на часы
 
@@ -33,7 +36,7 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`
    ```
    adb pair <IP>:<порт_сопряжения>     # ввести код с часов
    adb connect <IP>:<порт_отладки>
-   adb install -r app/build/outputs/apk/debug/app-debug.apk
+   adb install -r app/build/outputs/apk/release/app-release.apk
    ```
 4. Передать ключи из `local.properties` (один раз; повторить, если ключи сменились или данные приложения стёрты):
    ```
@@ -59,17 +62,21 @@ adb shell settings put secure voice_interaction_service dev.mushinlab.claudewatc
 
 | Файл | Что делает |
 |---|---|
-| `MainActivity.kt` | Точка входа: каждый запуск = новый чат + сразу голосовой ввод; озвучка ответа (TextToSpeech) |
-| `ChatViewModel.kt` | История текущего чата, стриминг ответа, ошибки |
-| `ClaudeChat.kt` | Запрос к Claude API через официальный Java SDK (стриминг, модель, effort, системный промпт «отвечай коротко») |
-| `Settings.kt` | Модель, effort, озвучка, ключ Claude, токен Notion |
+| `MainActivity.kt` | Точка входа: решает, открыть текущий чат или начать новый и слушать голос |
 | `KeySetupActivity.kt` | Приём ключей через `adb shell` (без UI) |
-| `Screens.kt` | UI на Compose for Wear OS |
+| `AppContainer.kt`, `ClaudeWatchApplication.kt` | Ручной DI: репозитории и общий scope приложения |
+| `data/ChatRepository.kt` | Запрос к Claude, состояние чата, «Повторить», сохранение на диск |
+| `data/ChatSession.kt`, `data/ChatStore.kt` | Модель чата и её хранение в `noBackupFilesDir` |
+| `data/ClaudeRemoteDataSource.kt` | Anthropic Java SDK: стриминг с отменой, таймауты, веб-поиск, инструменты Notion |
+| `data/NotionApi.kt` | Клиент Notion: запись только в разрешённые страницы |
+| `data/SettingsRepository.kt`, `data/SecretCipher.kt` | Настройки; ключи шифруются ключом из Android Keystore |
+| `service/ChatRequestService.kt` | Foreground service и Ongoing Activity только на время запроса |
+| `ui/` | Compose for Wear OS: навигация со свайпом назад, экраны чата и настроек, озвучка |
 | `assist/AssistServices.kt` | VoiceInteractionService, чтобы часы видели приложение как цифрового помощника |
 
 ## Известные ограничения MVP
 
-- История чатов не сохраняется между запусками (по ТЗ каждый вызов открывает новый чат).
-- Ключи хранятся в обычных SharedPreferences приложения.
+- Сохраняется только текущий чат; просмотренный чат заменяется новым при следующем запуске.
+- Пока идёт ответ, на циферблате виден значок Ongoing Activity (нужно разрешение на уведомления, его спросят один раз).
 - Тестовый хук `--es prompt "..."` у `MainActivity` работает только в debug-сборке.
 - Пока приложение назначено помощником, системное распознавание речи для *других* приложений может перестать работать (заглушка RecognitionService). Наш голосовой ввод идёт через распознаватель Google и не затронут.
